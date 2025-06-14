@@ -1,0 +1,19 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: sermonbot
+spec:
+  template:
+    spec:
+      containers:
+      - image: gcr.io/PROJECT_ID/sermonbot
+        volumeMounts:
+        - name: gcs-volume
+          mountPath: /mnt/gcs
+      volumes:
+      - name: gcs-volume
+        csi:
+          driver: gcsfuse.csi.storage.gke.io
+          readOnly: false
+          volumeAttributes:
+            bucketName: TEMP_BUCKET_NAME 
