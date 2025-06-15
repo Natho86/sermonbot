@@ -4,16 +4,16 @@ metadata:
   name: sermonbot
 spec:
   template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/cpu-throttling: "false"
     spec:
+      timeoutSeconds: 3600  # 60 minutes for large file processing
+      containerConcurrency: 1  # Process one request at a time
       containers:
       - image: gcr.io/PROJECT_ID/sermonbot
-        volumeMounts:
-        - name: gcs-volume
-          mountPath: /mnt/gcs
-      volumes:
-      - name: gcs-volume
-        csi:
-          driver: gcsfuse.csi.storage.gke.io
-          readOnly: false
-          volumeAttributes:
-            bucketName: TEMP_BUCKET_NAME 
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: 1000m 

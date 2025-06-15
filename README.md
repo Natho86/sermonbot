@@ -15,6 +15,8 @@ This version successfully processes large sermon files (tested with 979MB files)
 - ✅ SSL fallback for WordPress connections
 - ✅ Comprehensive logging and progress tracking
 - ✅ Custom metadata fields for WordPress media
+- ✅ 60-minute timeout for large file processing (successfully tested with multiple files)
+- ✅ Duplicate detection to avoid reprocessing archived files
 
 ---
 
@@ -179,8 +181,7 @@ gcloud run deploy sermonbot \
   --max-instances 10 \
   --service-account=$GCP_SVC_ACCOUNT \
   --execution-environment gen2 \
-  --add-volume name=gcs-volume,type=cloud-storage,bucket=llec-sermonbot-temp \
-  --add-volume-mount volume=gcs-volume,mount-path=/mnt/gcs
+  --no-cpu-throttling
 
 # Grant the service account permission to invoke the Cloud Run service
 gcloud run services add-iam-policy-binding sermonbot \
@@ -188,14 +189,17 @@ gcloud run services add-iam-policy-binding sermonbot \
   --role=roles/run.invoker --region=europe-west2
 ```
 
+**Note**: GCSFuse mounting is handled internally by the Python application, not through Cloud Run CSI volumes.
+
 ---
 
 ## Key Technical Improvements
 
 ### 1. GCSFuse Integration
-- Mounts Cloud Storage bucket as filesystem at `/mnt/gcs`
+- Uses Python `gcsfuse` library to mount Cloud Storage bucket as filesystem at `/mnt/gcs`
 - Enables efficient processing of large files without local disk limitations
 - Automatic cleanup and lifecycle management
+- Mounting handled internally by the application, not through Cloud Run CSI volumes
 
 ### 2. WordPress Upload with Metadata
 - Proper Basic authentication with base64 encoding
