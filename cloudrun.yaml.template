@@ -1,0 +1,19 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: sermonbot
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      timeoutSeconds: 3600  # 60 minutes for large file processing
+      containerConcurrency: 1  # Process one request at a time
+      containers:
+      - image: gcr.io/PROJECT_ID/sermonbot
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: 1000m 
