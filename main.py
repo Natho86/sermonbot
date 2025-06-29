@@ -305,15 +305,34 @@ def process_sermon_files():
                         if status.progress() * 100 % 20 == 0:  # Log every 20%
                             logger.info(f"Download {int(status.progress() * 100)}%")
                 
-                # Convert to M4A
-                logger.info("Converting WAV to M4A...")
+                # Step 1: Analyze max volume using ffmpeg volumedetect
+                analyze_cmd = [
+                    'ffmpeg', '-i', wav_path,
+                    '-af', 'volumedetect',
+                    '-f', 'null', '/dev/null'
+                ]
+                analyze_result = subprocess.run(analyze_cmd, capture_output=True, text=True)
+                max_volume = None
+                for line in analyze_result.stderr.splitlines():
+                    if 'max_volume:' in line:
+                        try:
+                            max_volume = float(line.split('max_volume:')[1].split('dB')[0].strip())
+                        except Exception:
+                            pass
+                if max_volume is None:
+                    raise RuntimeError(f"Could not detect max volume for {wav_path}")
+                target_db = -5.0  # Target normalization level in dBFS
+                gain = target_db - max_volume
+                logger.info(f"Detected max volume: {max_volume} dB, applying gain: {gain} dB")
+
+                # Step 2: Convert to M4A with normalization
                 ffmpeg_cmd = [
                     'ffmpeg', '-i', wav_path,
+                    '-af', f'volume={gain}dB',
                     '-c:a', 'aac', '-b:a', '192k',
                     '-loglevel', 'warning',
                     m4a_path
                 ]
-                
                 result = subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
                 
                 if result.stderr.strip():
