@@ -68,27 +68,44 @@ This version successfully processes large sermon files (tested with 979MB files)
 
 ---
 
-## Environment Variables File (`.env-vars.yaml`)
+## Environment Variables
 
-**Important:** The environment variables below are the **names of the secrets** in Google Secret Manager, **not the secret values themselves**.
+**Important:** Environment variables are now set directly in `cloudrun.yaml` under the `env` section of the container specification. You no longer need to use `.env-vars.yaml` for deployment. All required variables are already included in `cloudrun.yaml` and the file is gitignored for safety.
 
-Example `.env-vars.yaml`:
+Example `cloudrun.yaml` snippet:
 
 ```yaml
-TEMP_BUCKET_NAME: "sermonbot-temp"
-SERVICE_ACCOUNT_SECRET: "sermonbot-gcp-sa-account"
-WORDPRESS_APP_PASSWORD_SECRET: "sermonbot-wp-app-password"
-WORDPRESS_USERNAME: "sermonbot"
-RAW_FOLDER_ID_SECRET: "raw-folder-id"
-PROCESSED_FOLDER_ID_SECRET: "processed-folder-id"
-ARCHIVE_FOLDER_ID_SECRET: "archive-folder-id"
-API_KEY_SECRET: "sermonbot-api-key"
-WORDPRESS_API_URL: "https://llec.org.uk/wp-json/wp/v2/media"
-IMPERSONATE_EMAIL: "sermon.bot@llec.org.uk"
+containers:
+  - image: gcr.io/your-project-id/sermonbot
+    resources:
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+    env:
+      - name: TEMP_BUCKET_NAME
+        value: "sermonbot-temp"
+      - name: SERVICE_ACCOUNT_SECRET
+        value: "sermonbot-gcp-sa-account"
+      - name: WORDPRESS_APP_PASSWORD_SECRET
+        value: "sermonbot-wp-app-password"
+      - name: WORDPRESS_USERNAME
+        value: "sermonbot"
+      - name: RAW_FOLDER_ID_SECRET
+        value: "raw-folder-id"
+      - name: PROCESSED_FOLDER_ID_SECRET
+        value: "processed-folder-id"
+      - name: ARCHIVE_FOLDER_ID_SECRET
+        value: "archive-folder-id"
+      - name: API_KEY_SECRET
+        value: "sermonbot-api-key"
+      - name: WORDPRESS_API_URL
+        value: "https://llec.org.uk/wp-json/wp/v2/media"
+      - name: IMPERSONATE_EMAIL
+        value: "sermon.bot@llec.org.uk"
 ```
 
-- **Do not commit this file to version control.**
-- Add `.env-vars.yaml` to your `.gitignore`.
+- **Do not commit secrets to version control.**
+- `cloudrun.yaml` is already in `.gitignore` for safety.
 
 ---
 
@@ -136,60 +153,41 @@ gsutil iam ch serviceAccount:$SERVICE_ACCOUNT:objectAdmin gs://$BUCKET_NAME
 
 ## Deployment Configuration
 
-### Cloud Run Configuration Template
+### Cloud Run Configuration
 
-The `cloudrun.yaml.template` file contains placeholders for project-specific values. Generate the actual deployment file:
-
-```bash
-# Make the script executable
-chmod +x generate-cloudrun-config.sh
-
-# Generate cloudrun.yaml from template
-./generate-cloudrun-config.sh
-```
-
-This creates `cloudrun.yaml` with your project ID and bucket name.
-
-### Build and Deploy
+The `cloudrun.yaml` file now contains all required environment variables. You can deploy directly using this file:
 
 ```bash
-# Set your project ID
-export PROJECT_ID=$(gcloud config get-value project)
-
-# Build the container image
 gcloud builds submit --tag gcr.io/$PROJECT_ID/sermonbot
-
-# Deploy to Cloud Run with GCSFuse support
 gcloud run services replace cloudrun.yaml --region europe-west2
 ```
 
-### Alternative Manual Deployment
+### Alternative Manual Deployment (Advanced)
+
+If you wish to override or add environment variables at deploy time, you can use the `--update-env-vars` flag:
 
 ```bash
-PROJECT_ID=$(gcloud config get-value project)
-GCP_SVC_ACCOUNT="your-service-account@$PROJECT_ID.iam.gserviceaccount.com"
-
-gcloud run deploy sermonbot \
-  --image gcr.io/$PROJECT_ID/sermonbot \
+gcloud run services update sermonbot \
   --region europe-west2 \
-  --platform managed \
-  --env-vars-file .env-vars.yaml \
-  --memory 2Gi \
-  --cpu 1 \
-  --timeout 3600 \
-  --min-instances 0 \
-  --max-instances 10 \
-  --service-account=$GCP_SVC_ACCOUNT \
-  --execution-environment gen2 \
-  --no-cpu-throttling
-
-# Grant the service account permission to invoke the Cloud Run service
-gcloud run services add-iam-policy-binding sermonbot \
-  --member=serviceAccount:$GCP_SVC_ACCOUNT \
-  --role=roles/run.invoker --region=europe-west2
+  --update-env-vars KEY1=VALUE1,KEY2=VALUE2
 ```
 
-**Note**: GCSFuse mounting is handled internally by the Python application, not through Cloud Run CSI volumes.
+### Cloud Run Configuration Template
+
+The `cloudrun.yaml.template` file  includes all required environment variables as placeholders (e.g., `<TEMP_BUCKET_NAME>`). Before deploying, you must:
+
+1. **Copy the template:**
+   ```bash
+   cp cloudrun.yaml.template cloudrun.yaml
+   ```
+2. **Edit `cloudrun.yaml`** and replace all placeholder values (e.g., `<TEMP_BUCKET_NAME>`) with your actual configuration values.
+3. **Deploy using your completed `cloudrun.yaml`:**
+   ```bash
+   gcloud builds submit --tag gcr.io/$PROJECT_ID/sermonbot
+   gcloud run services replace cloudrun.yaml --region europe-west2
+   ```
+
+> **Note:** Do not commit secrets or sensitive values to version control. The `cloudrun.yaml` file is gitignored for safety.
 
 ---
 
@@ -332,7 +330,6 @@ The service implements the following security measures:
 ├── Dockerfile                   # Container configuration
 ├── cloudrun.yaml.template       # Cloud Run service template
 ├── generate-cloudrun-config.sh  # Script to generate deployment config
-├── .env-vars.yaml              # Environment variables (not committed)
 ├── .gcloudignore               # Files to ignore during build
 ├── .gitignore                  # Git ignore rules
 ├── lifecycle.json              # GCS bucket lifecycle policy
@@ -340,7 +337,6 @@ The service implements the following security measures:
 ```
 
 ### Files Not Committed to Git
-- `.env-vars.yaml` - Contains environment configuration
 - `cloudrun.yaml` - Generated deployment file with project-specific values
 
 ---

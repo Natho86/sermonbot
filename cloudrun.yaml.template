@@ -16,4 +16,25 @@ spec:
         resources:
           limits:
             memory: 2Gi
-            cpu: 1000m 
+            cpu: 1000m
+        env:
+          - name: TEMP_BUCKET_NAME
+            value: "<TEMP_BUCKET_NAME>"
+          - name: SERVICE_ACCOUNT_SECRET
+            value: "<SERVICE_ACCOUNT_SECRET>"
+          - name: WORDPRESS_APP_PASSWORD_SECRET
+            value: "<WORDPRESS_APP_PASSWORD_SECRET>"
+          - name: WORDPRESS_USERNAME
+            value: "<WORDPRESS_USERNAME>"
+          - name: RAW_FOLDER_ID_SECRET
+            value: "<RAW_FOLDER_ID_SECRET>"
+          - name: PROCESSED_FOLDER_ID_SECRET
+            value: "<PROCESSED_FOLDER_ID_SECRET>"
+          - name: ARCHIVE_FOLDER_ID_SECRET
+            value: "<ARCHIVE_FOLDER_ID_SECRET>"
+          - name: API_KEY_SECRET
+            value: "<API_KEY_SECRET>"
+          - name: WORDPRESS_API_URL
+            value: "<WORDPRESS_API_URL>"
+          - name: IMPERSONATE_EMAIL
+            value: "<IMPERSONATE_EMAIL>" 
